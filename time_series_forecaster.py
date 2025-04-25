@@ -6,21 +6,10 @@ import xgboost as xgb
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 
-def time_series_forecaster(data_path, target_col, date_cols=None, test_size=0.2, forecast_horizon=None):
-    """
-    Generalized time series forecasting using XGBoost
-    
-    Parameters:
-    - data_path: path to CSV file
-    - target_col: name of target variable column
-    - date_cols: list of columns that make up the date information (e.g., ['year', 'month'])
-                 OR name of datetime column (e.g., 'date')
-    - test_size: proportion of data to use for testing (0-1) or cutoff date
-    - forecast_horizon: number of future periods to predict (optional)
-    """
-    
+def time_series_forecaster(dataframe, target_col, date_cols=None, test_size=0.2, forecast_horizon=None):
+
     # Load data
-    df = pd.read_csv(data_path)
+    df = dataframe
     
     # Handle date columns
     if date_cols is None:
@@ -148,7 +137,7 @@ def time_series_forecaster(data_path, target_col, date_cols=None, test_size=0.2,
     if forecast_horizon:
         if not has_datetime_index:
             print("Warning: Future forecasting requires datetime index. Skipping...")
-            return df, None
+            return test['prediction']
         
         last_date = df.index.max()
         future_dates = pd.date_range(start=last_date, periods=forecast_horizon+1, freq='D')[1:]
@@ -186,6 +175,6 @@ def time_series_forecaster(data_path, target_col, date_cols=None, test_size=0.2,
         ax.set_title(f'Forecast for next {forecast_horizon} periods')
         plt.show()
         
-        return df, future_df
+        return future_df
     
-    return df
+    return test
