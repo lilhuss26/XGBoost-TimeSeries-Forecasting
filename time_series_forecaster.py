@@ -59,6 +59,20 @@ def time_series_forecaster(dataframe, target_col, date_cols=None, test_size=0.2,
         if col != target_col:  # Don't encode the target variable
             df[col] = pd.factorize(df[col])[0]
     
+    # Feature selection based on correlation
+    # Calculate correlation with target
+    correlations = df.corr()[target_col].abs()
+    # Select features with correlation above threshold (e.g., 0.1)
+    FEATURES = correlations[correlations > 0.1].index.tolist()
+    # Remove target from features
+    FEATURES = [f for f in FEATURES if f != target_col]
+    
+    if not FEATURES:
+        print("Warning: No features found with significant correlation. Using all features.")
+        FEATURES = [col for col in df.columns if col != target_col]
+    
+    print(f"Selected features: {FEATURES}")
+    
     # Train-test split
     if isinstance(test_size, float):
         # Random split
@@ -84,9 +98,6 @@ def time_series_forecaster(dataframe, target_col, date_cols=None, test_size=0.2,
         ax.legend()
         ax.set_title('Train-Test Split')
         plt.show()
-    
-    # Feature selection - use all columns except target
-    FEATURES = [col for col in df.columns if col != target_col]
     
     TARGET = target_col
     
