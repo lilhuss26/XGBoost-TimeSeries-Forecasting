@@ -91,6 +91,22 @@ def time_series_forecaster(dataframe, target_col, date_cols=None, test_size=0.2,
     # Drop rows with NaN values from lag features
     df = df.dropna()
     
+    # Convert categorical columns to numeric codes
+    categorical_cols = df.select_dtypes(include=['object', 'category']).columns
+    for col in categorical_cols:
+        if col != target_col:  # Don't encode the target variable
+            df[col] = pd.Categorical(df[col]).codes
+    
+    # Convert datetime columns to numeric features
+    datetime_cols = df.select_dtypes(include=['datetime64']).columns
+    for col in datetime_cols:
+        if col != target_col:  # Don't convert the target variable
+            df[f'{col}_year'] = df[col].dt.year
+            df[f'{col}_month'] = df[col].dt.month
+            df[f'{col}_day'] = df[col].dt.day
+            df[f'{col}_dayofweek'] = df[col].dt.dayofweek
+            df = df.drop(columns=[col])
+    
     # Feature selection based on correlation
     if target_col in df.columns:
         correlations = df.corr()[target_col].abs()
