@@ -116,7 +116,8 @@ def time_series_forecaster(dataframe, target_col, date_cols=None, test_size=0.2,
         FEATURES = [col for col in df.columns if col != target_col]
     
     if not FEATURES:
-        print("Warning: No features found with significant correlation. Using all features.")
+        warning_no_features = "Warning: No features found with significant correlation. Using all features."
+        print(warning_no_features)
         FEATURES = [col for col in df.columns if col != target_col]
     
     print(f"Selected features: {FEATURES}")
@@ -212,7 +213,8 @@ def time_series_forecaster(dataframe, target_col, date_cols=None, test_size=0.2,
     # Future forecasting (if requested)
     if forecast_horizon:
         if not has_datetime_index:
-            print("Warning: Future forecasting requires datetime index. Skipping...")
+            warning_no_datetime = "Warning: Future forecasting requires datetime index. Skipping..."
+            print(warning_no_datetime)
             return test['prediction']
         
         last_date = df.index.max()
@@ -252,7 +254,8 @@ def time_series_forecaster(dataframe, target_col, date_cols=None, test_size=0.2,
         # Ensure all features are in the correct order and exist
         missing_features = [f for f in FEATURES if f not in future_df.columns]
         if missing_features:
-            print(f"Warning: The following features are missing in future predictions: {missing_features}")
+            warning_missing_features = f"Warning: The following features are missing in future predictions: {missing_features}"
+            print(warning_missing_features)
             for feature in missing_features:
                 future_df[feature] = 0
         
