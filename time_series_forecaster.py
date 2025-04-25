@@ -165,11 +165,22 @@ def time_series_forecaster(data_path, target_col, date_cols=None, test_size=0.2,
         future_df = pd.DataFrame(index=future_dates)
         future_df = create_features(future_df)
         
-        # Ensure future_df has all categorical columns encoded the same way
-        for col in categorical_cols:
-            if col in FEATURES and col != target_col:
-                # Use the same encoding as original data
-                future_df[col] = 0  # Default value, adjust as needed
+        # Add all required features to future_df
+        # For datetime features, they're already created by create_features()
+        # For other features, we need to provide reasonable values
+        for feature in FEATURES:
+            if feature not in future_df.columns:
+                if feature in df.columns:
+                    # Use median value from training data for numerical features
+                    if pd.api.types.is_numeric_dtype(df[feature]):
+                        future_df[feature] = train[feature].median()
+                    else:
+                        # For categoricals, use the most common value
+                        future_df[feature] = train[feature].mode()[0]
+                else:
+                    # If feature not in original data (like derived features)
+                    # You may need special handling here
+                    future_df[feature] = 0
         
         future_df['prediction'] = reg.predict(future_df[FEATURES])
         
