@@ -144,31 +144,61 @@ def time_series_forecaster(dataframe, target_col, date_cols=None, test_size=0.2,
     X_test = test[FEATURES]
     y_test = test[TARGET]
     
-    # Model training with updated parameters
+    # Model training with enhanced parameters for time series
     reg = xgb.XGBRegressor(
-        base_score=0.5,
+        # Core parameters
         booster='gbtree',
-        n_estimators=2000,
+        n_estimators=3000,  # Increased for better learning
         early_stopping_rounds=100,
-        max_depth=8,
-        learning_rate=0.1,
-        min_child_weight=3,
-        subsample=0.9,
-        colsample_bytree=0.9,
-        gamma=0.1,
-        reg_alpha=0.1,
-        reg_lambda=1.0,
         objective='reg:squarederror',
-        enable_categorical=True,
         random_state=42,
-        tree_method='hist',
+        
+        # Learning parameters
+        learning_rate=0.01,  # Reduced for more stable learning
+        max_depth=7,  # Optimal depth for time series
+        min_child_weight=5,  # Increased to prevent overfitting
+        gamma=0.2,  # Increased to control overfitting
+        
+        # Sampling parameters
+        subsample=0.8,  # Random sampling of training data
+        colsample_bytree=0.8,  # Random sampling of features
+        colsample_bylevel=0.8,  # Random sampling of features at each level
+        
+        # Regularization parameters
+        reg_alpha=0.1,  # L1 regularization
+        reg_lambda=1.0,  # L2 regularization
         scale_pos_weight=1,
-        max_delta_step=0
+        
+        # Tree construction parameters
+        tree_method='hist',  # Fast histogram-based algorithm
+        grow_policy='depthwise',  # Controls how new nodes are added
+        max_delta_step=0,  # Maximum delta step for leaf output
+        max_leaves=0,  # Maximum number of leaves (0 for unlimited)
+        
+        # Time series specific parameters
+        monotone_constraints=None,  # Can be set if you know the relationship direction
+        interaction_constraints=None,  # Can be set to control feature interactions
+        
+        # Enable categorical features
+        enable_categorical=True,
+        
+        # Performance parameters
+        n_jobs=-1,  # Use all available cores
+        verbosity=1  # Show warnings
     )
 
-    reg.fit(X_train, y_train,
-           eval_set=[(X_train, y_train), (X_test, y_test)],
-           verbose=100)
+    # Fit the model with validation
+    reg.fit(
+        X_train, 
+        y_train,
+        eval_set=[(X_train, y_train), (X_test, y_test)],
+        eval_metric=['rmse', 'mae'],  # Multiple evaluation metrics
+        verbose=100
+    )
+    
+    # Print best iteration and metrics
+    print(f"Best iteration: {reg.best_iteration}")
+    print(f"Best RMSE: {reg.best_score}")
     
     # Feature importance
     fi = pd.DataFrame(data=reg.feature_importances_,
