@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import xgboost as xgb
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.model_selection import train_test_split
 
 def time_series_forecaster(dataframe, target_col, date_cols=None, test_size=0.2, forecast_horizon=None):
@@ -136,17 +136,6 @@ def time_series_forecaster(dataframe, target_col, date_cols=None, test_size=0.2,
             train = df.iloc[:split_idx]
             test = df.iloc[split_idx:]
     
-    # Visualize split if we have a datetime index
-    if has_datetime_index:
-        fig, ax = plt.subplots(figsize=(15, 5))
-        train[target_col].plot(ax=ax, label='Training Set')
-        test[target_col].plot(ax=ax, label='Test Set')
-        if isinstance(test_size, str):
-            ax.axvline(pd.to_datetime(test_size), color='black', ls='--')
-        ax.legend()
-        ax.set_title('Train-Test Split')
-        plt.show()
-    
     TARGET = target_col
     
     X_train = train[FEATURES]
@@ -202,8 +191,23 @@ def time_series_forecaster(dataframe, target_col, date_cols=None, test_size=0.2,
         plt.show()
     
     # Evaluation
-    score = np.sqrt(mean_squared_error(test[target_col], test['prediction']))
-    print(f'RMSE Score on Test set: {score:0.2f}')
+    r2 = r2_score(test[target_col], test['prediction'])
+    rmse = np.sqrt(mean_squared_error(test[target_col], test['prediction']))
+    print(f'R² Score on Test set: {r2:0.4f}')
+    print(f'RMSE Score on Test set: {rmse:0.2f}')
+    
+    # Plot R² visualization
+    plt.figure(figsize=(8, 8))
+    plt.scatter(test[target_col], test['prediction'], alpha=0.5)
+    plt.plot([test[target_col].min(), test[target_col].max()], 
+             [test[target_col].min(), test[target_col].max()], 
+             'r--', lw=2)
+    plt.xlabel('Actual Values')
+    plt.ylabel('Predicted Values')
+    plt.title(f'Fit line, R² = {r2:0.4f}')
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
     
     # Future forecasting (if requested)
     if forecast_horizon:
@@ -253,15 +257,7 @@ def time_series_forecaster(dataframe, target_col, date_cols=None, test_size=0.2,
                 future_df[feature] = 0
         
         # Make predictions
-        future_df['prediction'] = reg.predict(future_df[FEATURES])
-        
-        # Plot future forecast
-        ax = df[[target_col]].plot(figsize=(15, 5))
-        future_df['prediction'].plot(ax=ax, style='-')
-        plt.legend(['Actual Data', 'Future Predictions'])
-        ax.set_title(f'Forecast for next {forecast_horizon} periods')
-        plt.show()
-        
+        future_df['prediction'] = reg.predict(future_df[FEATURES])        
         return future_df
     
     return test
