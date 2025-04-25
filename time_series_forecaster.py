@@ -107,13 +107,15 @@ def time_series_forecaster(data_path, target_col, date_cols=None, test_size=0.2,
     y_test = test[TARGET]
     
     # Model training
-    reg = xgb.XGBRegressor(base_score=0.5, booster='gbtree',
-                         n_estimators=1000,
-                         early_stopping_rounds=50,
-                         objective='reg:squarederror',
-                         max_depth=3,
-                         learning_rate=0.01,
-                         enable_categorical=True)  # Enable categorical support
+    reg = xgb.XGBRegressor(base_score=0.5, booster='gblinear',
+                        n_estimators=500,
+                        early_stopping_rounds=50,
+                        alpha=0.1,          
+                        lambda_=1.0,
+                        objective='reg:squarederror',
+                        #max_depth=3,
+                        learning_rate=0.01,
+                        enable_categorical=True)  
     
     reg.fit(X_train, y_train,
            eval_set=[(X_train, y_train), (X_test, y_test)],
