@@ -32,31 +32,28 @@ def time_series_forecaster(data_path, target_col, date_cols=None, test_size=0.2,
         df = df.set_index(date_cols)
         df.sort_index(inplace=True)
         
-        # Create features from datetime index
+        # Create features from datetime index - only using the specified date_col
         def create_features(df):
             df = df.copy()
             if not isinstance(df.index, pd.DatetimeIndex):
                 return df
-            df['hour'] = df.index.hour
-            df['dayofweek'] = df.index.dayofweek
-            df['quarter'] = df.index.quarter
-            df['month'] = df.index.month
-            df['year'] = df.index.year
-            df['dayofyear'] = df.index.dayofyear
-            df['dayofmonth'] = df.index.day
-            df['weekofyear'] = df.index.isocalendar().week
+            # Only create features from the specified date column
+            df[date_cols] = df.index
             return df
         
         has_datetime_index = True
     else:
         # Multiple columns case (year, month, etc.)
-        # Create a dummy index (we'll use the date columns directly as features)
-        df = df.set_index(pd.RangeIndex(start=0, stop=len(df)))
-        has_datetime_index = False
+        # Create a datetime index from the date columns
+        date_cols_str = [str(col) for col in date_cols]
+        df['date'] = pd.to_datetime(df[date_cols_str].astype(str).agg('-'.join, axis=1))
+        df = df.set_index('date')
+        df.sort_index(inplace=True)
         
-        # For multiple date columns, we'll use them directly as features
         def create_features(df):
             return df.copy()
+        
+        has_datetime_index = True
     
     # Initial visualization if we have a datetime index
     if has_datetime_index:
@@ -99,17 +96,8 @@ def time_series_forecaster(data_path, target_col, date_cols=None, test_size=0.2,
         ax.set_title('Train-Test Split')
         plt.show()
     
-    # Feature selection
-    if has_datetime_index:
-        FEATURES = ['dayofyear', 'hour', 'dayofweek', 'quarter', 'month', 'year']
-    else:
-        # Use the provided date columns plus any other features
-        FEATURES = date_cols.copy() if isinstance(date_cols, list) else [date_cols]
-    
-    # Add any non-date, non-target columns as features
-    other_cols = [col for col in df.columns 
-                  if col not in [target_col] and col not in FEATURES]
-    FEATURES.extend(other_cols)
+    # Feature selection - use all columns except target
+    FEATURES = [col for col in df.columns if col != target_col]
     
     TARGET = target_col
     
@@ -163,11 +151,18 @@ def time_series_forecaster(data_path, target_col, date_cols=None, test_size=0.2,
         last_date = df.index.max()
         future_dates = pd.date_range(start=last_date, periods=forecast_horizon+1, freq='D')[1:]
         future_df = pd.DataFrame(index=future_dates)
-        future_df = create_features(future_df)
+        
+        # Create future date columns
+        if isinstance(date_cols, list):
+            for col in date_cols:
+                if 'year' in col:
+                    future_df[col] = future_df.index.year
+                elif 'month' in col:
+                    future_df[col] = future_df.index.month
+                elif 'day' in col:
+                    future_df[col] = future_df.index.day
         
         # Add all required features to future_df
-        # For datetime features, they're already created by create_features()
-        # For other features, we need to provide reasonable values
         for feature in FEATURES:
             if feature not in future_df.columns:
                 if feature in df.columns:
@@ -178,8 +173,6 @@ def time_series_forecaster(data_path, target_col, date_cols=None, test_size=0.2,
                         # For categoricals, use the most common value
                         future_df[feature] = train[feature].mode()[0]
                 else:
-                    # If feature not in original data (like derived features)
-                    # You may need special handling here
                     future_df[feature] = 0
         
         future_df['prediction'] = reg.predict(future_df[FEATURES])
